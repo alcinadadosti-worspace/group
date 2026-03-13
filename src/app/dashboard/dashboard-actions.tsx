@@ -3,9 +3,8 @@
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { toast } from '@/components/ui/use-toast'
-import { LogOut, Camera, Save } from 'lucide-react'
+import { LogOut, Camera, Upload } from 'lucide-react'
 
 interface DashboardActionsProps {
   managerId: string
@@ -13,44 +12,78 @@ interface DashboardActionsProps {
 
 export function DashboardActions({ managerId }: DashboardActionsProps) {
   const router = useRouter()
-  const [avatarUrl, setAvatarUrl] = React.useState('')
-  const [isUpdating, setIsUpdating] = React.useState(false)
-  const [showAvatarInput, setShowAvatarInput] = React.useState(false)
+  const [isUploading, setIsUploading] = React.useState(false)
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   const handleLogout = async () => {
+    setIsLoggingOut(true)
     try {
-      await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/')
-      router.refresh()
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      })
+
+      if (response.ok) {
+        // Limpar qualquer estado local
+        window.location.href = '/'
+      } else {
+        throw new Error('Falha no logout')
+      }
     } catch {
       toast({
         title: 'Erro ao sair',
+        description: 'Tente novamente.',
         variant: 'destructive',
       })
+      setIsLoggingOut(false)
     }
   }
 
-  const handleUpdateAvatar = async () => {
-    if (!avatarUrl.trim()) {
+  const handleFileSelect = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validar tipo
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
       toast({
-        title: 'URL inválida',
-        description: 'Por favor, insira uma URL válida para a imagem.',
+        title: 'Tipo de arquivo inválido',
+        description: 'Use JPG, PNG, WebP ou GIF.',
         variant: 'destructive',
       })
       return
     }
 
-    setIsUpdating(true)
+    // Validar tamanho (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: 'Arquivo muito grande',
+        description: 'O tamanho máximo é 2MB.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsUploading(true)
 
     try {
-      const response = await fetch(`/api/managers/${managerId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ avatarUrl }),
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        throw new Error('Erro ao atualizar foto')
+        throw new Error(data.error || 'Erro ao fazer upload')
       }
 
       toast({
@@ -59,72 +92,71 @@ export function DashboardActions({ managerId }: DashboardActionsProps) {
         variant: 'success',
       })
 
-      setShowAvatarInput(false)
-      setAvatarUrl('')
       router.refresh()
-    } catch {
+    } catch (error) {
       toast({
-        title: 'Erro ao atualizar',
-        description: 'Não foi possível atualizar sua foto. Tente novamente.',
+        title: 'Erro ao atualizar foto',
+        description: error instanceof Error ? error.message : 'Tente novamente.',
         variant: 'destructive',
       })
     } finally {
-      setIsUpdating(false)
+      setIsUploading(false)
+      // Limpar input para permitir selecionar o mesmo arquivo novamente
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
   return (
     <div className="mt-6 w-full space-y-3">
-      {showAvatarInput ? (
-        <div className="space-y-2">
-          <Input
-            type="url"
-            placeholder="URL da imagem (https://...)"
-            value={avatarUrl}
-            onChange={(e) => setAvatarUrl(e.target.value)}
-          />
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => setShowAvatarInput(false)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              size="sm"
-              className="flex-1 gap-2"
-              onClick={handleUpdateAvatar}
-              disabled={isUpdating}
-            >
-              {isUpdating ? (
-                <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Save className="h-4 w-4" />
-              )}
-              Salvar
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <Button
-          variant="outline"
-          className="w-full gap-2"
-          onClick={() => setShowAvatarInput(true)}
-        >
-          <Camera className="h-4 w-4" />
-          Alterar Foto
-        </Button>
-      )}
+      {/* Input de arquivo oculto */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        onChange={handleFileChange}
+        className="hidden"
+      />
 
+      {/* Botão de upload de foto */}
+      <Button
+        variant="outline"
+        className="w-full gap-2"
+        onClick={handleFileSelect}
+        disabled={isUploading}
+      >
+        {isUploading ? (
+          <>
+            <div className="h-4 w-4 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+            Enviando...
+          </>
+        ) : (
+          <>
+            <Camera className="h-4 w-4" />
+            Alterar Foto
+          </>
+        )}
+      </Button>
+
+      {/* Botão de logout */}
       <Button
         variant="ghost"
         className="w-full gap-2 text-red-500 hover:text-red-600 hover:bg-red-50"
         onClick={handleLogout}
+        disabled={isLoggingOut}
       >
-        <LogOut className="h-4 w-4" />
-        Sair
+        {isLoggingOut ? (
+          <>
+            <div className="h-4 w-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+            Saindo...
+          </>
+        ) : (
+          <>
+            <LogOut className="h-4 w-4" />
+            Sair
+          </>
+        )}
       </Button>
     </div>
   )
