@@ -5,7 +5,12 @@
       "Bash(dir /b)",
       "Bash(npm install:*)",
       "Bash(npx prisma init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: Implementação completa do FeedSyncs\n\nSistema de feedback para gestores da franquia O Boticário com:\n\n- Design System inspirado no Culture Amp \\(minimalista, moderno\\)\n- Listagem pública de gestores com notas médias visíveis\n- Sistema de avaliação \\(1-5 estrelas\\) com comentários privados\n- Dashboard do gestor com estatísticas e lista de feedbacks\n- Página de Ouvidoria para denúncias anônimas\n- Autenticação JWT para área restrita dos gestores\n- Integração com Slack para notificações de novos feedbacks\n- Configuração de deploy para Render \\(render.yaml\\)\n- Seed de dados para desenvolvimento\n\nStack: Next.js 16, React 19, TypeScript, Tailwind CSS v4,\nPrisma ORM, PostgreSQL, Radix UI, Slack Web API\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nchore: Configurar Supabase como banco de dados\n\n- Atualizar schema Prisma com directUrl para Supabase\n- Remover criação de banco no render.yaml \\(usar Supabase externo\\)\n- Adicionar prisma db push no build command\n- Atualizar .env.example com instruções do Supabase\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
