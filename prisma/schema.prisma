@@ -3,11 +3,12 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // Modelo de Gestor/Usuário
@@ -16,19 +17,16 @@ model User {
   name          String
   email         String     @unique
   password      String
-  role          String     // Ex: "Gerente de Loja", "Coordenador Regional"
-  store         String?    // Loja associada
+  role          String
+  store         String?
   avatarUrl     String?
-  slackUserId   String?    // ID do usuário no Slack para notificações
+  slackUserId   String?
   averageRating Float      @default(0)
   totalRatings  Int        @default(0)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  // Feedbacks recebidos
   feedbacks     Feedback[]
-
-  // Denúncias recebidas
   reports       Report[]   @relation("ReportedUser")
 
   @@map("users")
@@ -37,12 +35,11 @@ model User {
 // Modelo de Feedback/Avaliação
 model Feedback {
   id          String   @id @default(cuid())
-  rating      Int      // Nota de 1 a 5
-  comment     String?  // Comentário privado (opcional)
-  anonymous   Boolean  @default(true) // Feedback anônimo
+  rating      Int
+  comment     String?
+  anonymous   Boolean  @default(true)
   createdAt   DateTime @default(now())
 
-  // Gestor que recebeu o feedback
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -52,15 +49,14 @@ model Feedback {
 // Modelo de Ouvidoria/Denúncia
 model Report {
   id              String   @id @default(cuid())
-  category        String   // Tipo de denúncia (assédio, má conduta, etc.)
-  description     String   // Descrição detalhada
+  category        String
+  description     String
   anonymous       Boolean  @default(true)
-  reporterEmail   String?  // Email opcional para retorno
-  status          String   @default("pending") // pending, investigating, resolved
+  reporterEmail   String?
+  status          String   @default("pending")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  // Gestor/Líder denunciado (opcional - pode ser denúncia geral)
   reportedUserId  String?
   reportedUser    User?    @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: SetNull)
 
